@@ -1,0 +1,164 @@
+name: Build for Windows arm64
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "tag"
+        required: false
+        default: ""
+        type: string
+  workflow_dispatch:
+
+jobs:
+  build-windows-app:
+    name: Release Windows arm64
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: master
+
+      - name: Install 7-Zip
+        run: choco install 7zip
+
+      - name: Download and Setup libmpv (ARM64)
+        shell: pwsh
+        run: |
+          $repo = "zhongfly/mpv-winbuild"
+          $asset = (Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest").assets | Where-Object name -match "mpv-dev-aarch64-.*-git-.*\.7z" | Select-Object -First 1
+          if (!$asset) { throw "Asset not found" }
+          
+          Invoke-WebRequest $asset.browser_download_url -OutFile "libmpv.7z"
+          7z x "libmpv.7z" "-olibmpv_extract"
+          
+          $dest = "build/windows/arm64/libmpv"
+          New-Item -ItemType Directory -Force -Path "$dest/include"
+          
+          # Copy DLLs and Libs
+          Get-ChildItem -Path "libmpv_extract" -Include "libmpv-2.dll", "libmpv.dll.a" -Recurse | Copy-Item -Destination $dest
+          
+          # Copy include/mpv
+          $inc = Get-ChildItem -Path "libmpv_extract" -Filter "mpv" -Directory -Recurse | Select-Object -First 1
+          if ($inc) { Copy-Item "$($inc.FullName)/*" "$dest/include" -Recurse }
+          
+          Write-Host "libmpv setup complete at $dest"
+
+      - name: Download and Setup ANGLE (ARM64)
+        shell: pwsh
+        run: |
+          $repo = "mmozeiko/build-angle"
+          $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest"
+          $asset = $latestRelease.assets | Where-Object { $_.name -match "angle-arm64-.*\.zip" } | Select-Object -First 1
+          
+          if (-not $asset) {
+            Write-Error "Could not find compatible ANGLE asset in latest release."
+            exit 1
+          }
+          
+          $downloadUrl = $asset.browser_download_url
+          $outFile = "angle.zip"
+          Write-Host "Downloading ANGLE from $downloadUrl"
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $outFile
+          
+          $extractDir = "angle_extract"
+          New-Item -ItemType Directory -Force -Path $extractDir
+          Expand-Archive -Path $outFile -DestinationPath $extractDir -Force
+          
+          # Configure for build
+          $dest = "build/windows/arm64/ANGLE"
+          New-Item -ItemType Directory -Force -Path $dest
+          
+          # Find lib directory (containing .lib files)
+          $libDir = Get-ChildItem -Path $extractDir -Filter "lib" -Directory -Recurse | Where-Object { (Get-ChildItem $_.FullName -Filter "*.lib").Count -gt 0 } | Select-Object -First 1
+          if ($libDir) {
+             New-Item -ItemType Directory -Force -Path "$dest/lib"
+             Copy-Item "$($libDir.FullName)/*" "$dest/lib" -Recurse
+          } else {
+             Write-Error "ANGLE lib directory not found"; exit 1
+          }
+          
+          # Find bin directory or root containing DLLs
+          # We look for libEGL.dll
+          $dllFile = Get-ChildItem -Path $extractDir -Filter "libEGL.dll" -Recurse | Select-Object -First 1
+          if ($dllFile) {
+             # Copy all DLLs from that directory to dest root
+             $dllDir = $dllFile.DirectoryName
+             Copy-Item "$dllDir/*.dll" "$dest"
+          } else {
+             Write-Error "libEGL.dll not found"; exit 1
+          }
+          
+          # Find include directory
+          $includeDir = Get-ChildItem -Path $extractDir -Filter "include" -Directory -Recurse | Where-Object { Test-Path "$($_.FullName)/EGL" } | Select-Object -First 1
+          if ($includeDir) {
+             New-Item -ItemType Directory -Force -Path "$dest/include"
+             Copy-Item "$($includeDir.FullName)/*" "$dest/include" -Recurse
+          } else {
+             Write-Error "ANGLE include directory not found"; exit 1
+          }
+          
+          Write-Host "ANGLE setup complete at $dest"
+
+      - name: Add fastforge and Inno Setup
+        run: |
+          dart pub global activate fastforge
+          choco install innosetup
+
+      - name: Add Chinese language file for Inno Setup
+        run: |
+          Copy-Item "windows/packaging/exe/ChineseSimplified.isl" "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl"
+        shell: pwsh
+
+      - name: Set and Extract version
+        shell: pwsh
+        run: lib/scripts/build.ps1
+
+      - name: Build Windows ARM64
+        run: |
+          flutter build windows
+          # Assuming fastforge supports arm64 or we just package manually if fastforge is x64 specific
+          # Using manual packaging logic similar to x64 but adapted if needed
+          # fastforge package --platform windows --targets exe --flutter-build-args="dart-define-from-file=pili_release.json" 
+          # Note: fastforge might re-trigger build. If so, we need to ensure it uses --arch=arm64.
+          # If fastforge doesn't support passing arch easily or re-builds, we might need to skip it or configure it.
+          # For now, let's try to use fastforge if it allows passing args, otherwise fallback to manual zip.
+          # The user asked for "Build for Windows arm64", let's assume standard flutter build + manual zip is safer if fastforge is uncertain.
+          # But existing workflow uses fastforge. Let's try to use it but pass the arch.
+          # fastforge package command runs build? Yes.
+          # Let's just use flutter build directly and zip, as fastforge might not be fully arm64 aware or might overwrite our manual libmpv setup if it cleans?
+          # Actually, flutter build windows --arch=arm64 is safe.
+          # We will skip fastforge for now to ensure our manual steps are preserved and just zip the runner output.
+
+      - name: Prepare Upload
+        run: |
+          mkdir -p Release/PiliPlus-Win-Arm64
+          mv build/windows/arm64/runner/Release/* Release/PiliPlus-Win-Arm64/
+          # No Inno Setup for ARM64 yet unless we configure it, just providing zip for now.
+
+      - name: Compress
+        if: ${{ github.event.inputs.tag != '' }}
+        run: |
+          Compress-Archive -Path "Release/PiliPlus-Win-Arm64" -DestinationPath "PiliPlus_windows_${{env.version}}_arm64.zip"
+        shell: pwsh
+
+      - name: Release
+        if: ${{ github.event.inputs.tag != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.tag }}
+          files: |
+            PiliPlus_windows_*_arm64.zip
+
+      - name: Upload windows file release
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-file-arm64-release
+          path: Release
