@@ -1123,8 +1123,8 @@ packages:
     description:
       path: media_kit
       ref: "version_1.2.5"
-      resolved-ref: bc999bf181ddf12d60891f76e41359e4177b93a7
-      url: "https://github.com/bggRGjQaUbCoE/media-kit.git"
+      resolved-ref: "7f4c33b7478b2df25ad82bf06e5a3229ca168e71"
+      url: "https://github.com/AngelaCooljx/media-kit-Win-Arm64.git"
     source: git
     version: "1.1.11"
   media_kit_libs_android_video:
@@ -1132,8 +1132,8 @@ packages:
     description:
       path: "libs/android/media_kit_libs_android_video"
       ref: "version_1.2.5"
-      resolved-ref: bc999bf181ddf12d60891f76e41359e4177b93a7
-      url: "https://github.com/bggRGjQaUbCoE/media-kit.git"
+      resolved-ref: "7f4c33b7478b2df25ad82bf06e5a3229ca168e71"
+      url: "https://github.com/AngelaCooljx/media-kit-Win-Arm64.git"
     source: git
     version: "1.3.7"
   media_kit_libs_ios_video:
@@ -1165,8 +1165,8 @@ packages:
     description:
       path: "libs/universal/media_kit_libs_video"
       ref: "version_1.2.5"
-      resolved-ref: bc999bf181ddf12d60891f76e41359e4177b93a7
-      url: "https://github.com/bggRGjQaUbCoE/media-kit.git"
+      resolved-ref: "7f4c33b7478b2df25ad82bf06e5a3229ca168e71"
+      url: "https://github.com/AngelaCooljx/media-kit-Win-Arm64.git"
     source: git
     version: "1.0.5"
   media_kit_libs_windows_video:
@@ -1174,8 +1174,8 @@ packages:
     description:
       path: "libs/windows/media_kit_libs_windows_video"
       ref: "version_1.2.5"
-      resolved-ref: bc999bf181ddf12d60891f76e41359e4177b93a7
-      url: "https://github.com/bggRGjQaUbCoE/media-kit.git"
+      resolved-ref: "7f4c33b7478b2df25ad82bf06e5a3229ca168e71"
+      url: "https://github.com/AngelaCooljx/media-kit-Win-Arm64.git"
     source: git
     version: "1.0.10"
   media_kit_native_event_loop:
@@ -1183,8 +1183,8 @@ packages:
     description:
       path: media_kit_native_event_loop
       ref: "version_1.2.5"
-      resolved-ref: bc999bf181ddf12d60891f76e41359e4177b93a7
-      url: "https://github.com/bggRGjQaUbCoE/media-kit.git"
+      resolved-ref: "7f4c33b7478b2df25ad82bf06e5a3229ca168e71"
+      url: "https://github.com/AngelaCooljx/media-kit-Win-Arm64.git"
     source: git
     version: "1.0.9"
   media_kit_video:
@@ -1192,8 +1192,8 @@ packages:
     description:
       path: media_kit_video
       ref: "version_1.2.5"
-      resolved-ref: bc999bf181ddf12d60891f76e41359e4177b93a7
-      url: "https://github.com/bggRGjQaUbCoE/media-kit.git"
+      resolved-ref: "7f4c33b7478b2df25ad82bf06e5a3229ca168e71"
+      url: "https://github.com/AngelaCooljx/media-kit-Win-Arm64.git"
     source: git
     version: "1.2.5"
   menu_base:
