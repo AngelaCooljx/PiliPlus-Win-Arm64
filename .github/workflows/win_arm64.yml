@@ -50,9 +50,20 @@ jobs:
           # Copy libmpv-2.dll and vulkan-1.dll from minnyres package
           Get-ChildItem -Path "libmpv_extract" -Include "libmpv-2.dll", "vulkan-1.dll" -Recurse | Copy-Item -Destination $dest
           
-          # Copy include/mpv headers (flattened)
-          $inc = Get-ChildItem -Path "libmpv_extract" -Filter "mpv" -Directory -Recurse | Select-Object -First 1
-          if ($inc) { Copy-Item "$($inc.FullName)/*" "$dest/include" -Recurse }
+          # Copy include/mpv headers
+          if (Test-Path "libmpv_extract/mpv/include/mpv") {
+              Copy-Item "libmpv_extract/mpv/include/mpv" -Destination "$dest/include" -Recurse
+          } else {
+              # Fallback if structure is slightly different (e.g. no top level mpv folder)
+              Write-Warning "Standard path libmpv_extract/mpv/include/mpv not found, searching..."
+              $mpvInc = Get-ChildItem -Path "libmpv_extract" -Filter "mpv" -Directory -Recurse | Where-Object { Test-Path "$($_.FullName)/client.h" } | Select-Object -First 1
+              if ($mpvInc) {
+                  Copy-Item $mpvInc.FullName "$dest/include" -Recurse
+              } else {
+                  Write-Error "Could not find mpv include directory containing client.h"
+                  exit 1
+              }
+          }
           
           # Build zlib from source (Chromium mirror)
           $zlibRepo = "https://chromium.googlesource.com/chromium/src/third_party/zlib"
